@@ -117,7 +117,29 @@ To prevent our write-database from being bogged down by complex dashboard querie
 
 ---
 
-## 9. CI/CD & Deployment Strategies
+## 9. The CAP Theorem in our Architecture
+**The Concept:** The CAP Theorem states that in a distributed system, you can only provide two out of three guarantees: **C**onsistency, **A**vailability, and **P**artition Tolerance.
+
+*   **Consistency (C):** Every read receives the most recent write or an error.
+*   **Availability (A):** Every request receives a (non-error) response, without the guarantee that it contains the most recent write.
+*   **Partition Tolerance (P):** The system continues to operate despite an arbitrary number of messages being dropped (or delayed) by the network between nodes.
+
+In modern microservices, **Partition Tolerance (P) is non-negotiable** because network failures are inevitable. Therefore, we must choose between **CP** (Consistency) or **AP** (Availability).
+
+**How we applied it in this project:**
+We generally favor **AP (Availability)** to ensure the system stays responsive and provides a seamless user experience.
+
+1.  **Service Discovery (Eureka) -> AP:**
+    Netflix Eureka is a classic AP system. During a network partition, Eureka nodes prefer to serve potentially "stale" registration data rather than no data at all. It's better for the API Gateway to try an old IP address of the Order Service than to return a 500 error because it "can't find" any service.
+2.  **Order Processing (Saga Pattern) -> AP (Eventual Consistency):**
+    We chose **Eventual Consistency** over Strong Consistency. When a user buys an item, the Order Service saves it as `PENDING` and returns `200 OK` immediately (**High Availability**). We don't wait for the Payment Service to respond. The system eventually becomes consistent when Kafka delivers the `PAYMENT_SUCCESS` event to the Order Service.
+
+**In an Interview:**
+> *"In a microservices environment, network partitions are a reality, so I design for **AP (Availability and Partition Tolerance)**. For instance, I used Eureka for service discovery because it's an AP system that prioritizes availability over perfect consistency during network issues. For business logic, I implement the **Saga Pattern** with Kafka. This allows our 'Order' flow to be **Eventually Consistent**—we provide the user with an immediate success response (Availability) while the payment and notifications are processed asynchronously in the background."*
+
+---
+
+## 10. CI/CD & Deployment Strategies
 Interviewers often ask how you push new microservice versions to production without causing downtime.
 
 **The Strategy: Blue-Green Deployment**
@@ -134,7 +156,7 @@ Blue-Green deployment is a technique that reduces downtime and risk by running t
 
 ---
 
-## 10. End-to-End Architecture Flow (The 'Order' Journey)
+## 11. End-to-End Architecture Flow (The 'Order' Journey)
 Interviewers frequently ask: *"Walk me through exactly what happens in your architecture when a user clicks 'Buy'."* 
 
 Here is the exact step-by-step design flow of our application:
